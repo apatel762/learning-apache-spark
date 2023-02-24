@@ -10,6 +10,11 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+        with:
+          # Fetch all history for all tags and branches so that the
+          # spotless-maven-plugin can successfully ratchet formatting
+          # changes against the master branch.
+          fetch-depth: 0
 
       - name: Set up JDK 17
         uses: actions/setup-java@v3
