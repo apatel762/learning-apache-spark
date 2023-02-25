@@ -10,6 +10,7 @@ To make Spark work with Java 17, you need to include the following JVM argument 
 
 ```
 --add-exports java.base/sun.nio.ch=ALL-UNNAMED
+--add-exports java.base/sun.security.action=ALL-UNNAMED
 ```
 
 See "[Running unit tests with Spark 3.3.0 on Java 17 fails...](https://stackoverflow.com/questions/72724816/running-unit-tests-with-spark-3-3-0-on-java-17-fails-with-illegalaccesserror-cl)".
