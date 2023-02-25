@@ -9,7 +9,7 @@ import scala.Tuple2;
 public class MainSection6 {
 
   public static void main(String[] args) {
-    List<String> logMessages = new ArrayList<>(5);
+    List<String> logMessages = new ArrayList<>(6);
     logMessages.add("WARN: Tuesday 4 September 0405");
     logMessages.add("WARN: Tuesday 4 September 0406");
     logMessages.add("ERROR: Tuesday 4 September 0408");
