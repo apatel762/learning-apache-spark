@@ -1,0 +1,34 @@
+#!/bin/bash
+
+function _pre_commit_hook() {
+  # variable to help us navigate out of the
+  # git hooks folder and up to the project root
+  local CWD
+  local MAIN_DIR
+
+  CWD=$(pwd)
+  MAIN_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+  cd "$MAIN_DIR"/../../ || exit 1
+
+  # -------------------------------------------
+  # this is the actual pre-commit hook work
+
+  mvn spotless:check
+  if [ $? -ne 0 ]; then
+    echo "Running 'mvn spotless:apply' to fix code format violations."
+    mvn spotless:apply
+    # go back to current working dir
+    # and return failure exit code
+    cd "$CWD" || exit 1
+    exit 1
+  fi
+
+  # -------------------------------------------
+
+  cd "$CWD" || exit 1
+  exit 0
+}
+
+echo "Running pre-commit hook"
+_pre_commit_hook
