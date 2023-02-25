@@ -9,7 +9,7 @@ import org.apache.spark.api.java.JavaSparkContext;
 public class MainSection7 {
 
   public static void main(String[] args) {
-    List<String> logMessages = new ArrayList<>(5);
+    List<String> logMessages = new ArrayList<>(6);
     logMessages.add("WARN: Tuesday 4 September 0405");
     logMessages.add("WARN: Tuesday 4 September 0406");
     logMessages.add("ERROR: Tuesday 4 September 0408");
