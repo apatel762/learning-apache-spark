@@ -19,9 +19,9 @@ public class KeywordRankingPractical {
 
     try (JavaSparkContext sc = new JavaSparkContext(conf)) {
       sc.textFile("src/main/resources/subtitles/input.txt")
-          .flatMap(KeywordRankingPractical::splitLine)
           .map(KeywordRankingPractical::stripPunctuation)
           .map(word -> word.toLowerCase(Locale.ENGLISH))
+          .flatMap(KeywordRankingPractical::splitLine)
           .filter(StringUtils::isAlpha)
           .filter(Util::isNotBoring)
           .mapToPair(KeywordRankingPractical::toCountable)
