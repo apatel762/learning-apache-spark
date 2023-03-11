@@ -3,7 +3,6 @@ package com.aspatel;
 import static com.google.common.base.Preconditions.*;
 import static java.util.Comparator.*;
 
-import java.util.Comparator;
 import java.util.Map.Entry;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
@@ -22,11 +21,9 @@ public class BigDataPractical {
 
     try (JavaSparkContext sc = new JavaSparkContext(conf)) {
 
-      JavaRDD<String> chapters = sc.textFile(
-          "src/main/resources/viewing figures/chapters.csv");
+      JavaRDD<String> chapters = sc.textFile("src/main/resources/viewing figures/chapters.csv");
       JavaRDD<String> views = sc.textFile("src/main/resources/viewing figures/views-*.csv");
-      JavaRDD<String> titles = sc.textFile(
-          "src/main/resources/viewing figures/titles.csv");
+      JavaRDD<String> titles = sc.textFile("src/main/resources/viewing figures/titles.csv");
 
       /*
       EXERCISE 1
@@ -77,15 +74,14 @@ public class BigDataPractical {
               .distinct();
 
       JavaPairRDD<String, String> chaptersToCourses =
-          chapters
-              .mapToPair(
-                  line -> {
-                    String[] values = line.split(",");
-                    String chapterId = values[0];
-                    String courseId = values[1];
+          chapters.mapToPair(
+              line -> {
+                String[] values = line.split(",");
+                String chapterId = values[0];
+                String courseId = values[1];
 
-                    return new Tuple2<>(chapterId, courseId);
-                  });
+                return new Tuple2<>(chapterId, courseId);
+              });
 
       JavaPairRDD<String, Integer> coursesAndViews =
           chaptersToUsers
@@ -107,7 +103,7 @@ public class BigDataPractical {
                     long chaptersSeen = row._2;
 
                     // For a given "Course", each "User" has seen "x" chapters.
-                    return new Tuple2<>(courseId, new Tuple2<>(userId, chaptersSeen  ));
+                    return new Tuple2<>(courseId, new Tuple2<>(userId, chaptersSeen));
                   })
               .join(courseIdAndChapterCount)
               .mapToPair(
@@ -130,28 +126,33 @@ public class BigDataPractical {
       */
       System.out.println();
       System.out.println("EXERCISE 3");
-      titles.mapToPair(s-> {
-        String[] mapping = s.split(",");
-        String courseId = mapping[0];
-        String title = mapping[1];
-        return new Tuple2<>(courseId, title);})
+      titles
+          .mapToPair(
+              s -> {
+                String[] mapping = s.split(",");
+                String courseId = mapping[0];
+                String title = mapping[1];
+                return new Tuple2<>(courseId, title);
+              })
           .join(coursesAndViews)
-          .mapToPair(row -> {
-            String title = row._2._1;
-            int totalViews = row._2._2;
+          .mapToPair(
+              row -> {
+                String title = row._2._1;
+                int totalViews = row._2._2;
 
-            return new Tuple2<>(totalViews, title);
-          })
-              .collectAsMap()
+                return new Tuple2<>(totalViews, title);
+              })
+          .collectAsMap()
           .entrySet()
           .stream()
-          .sorted(Entry.<Integer,String>comparingByKey().reversed())
-          .forEachOrdered(entry -> {
-            int totalViews = entry.getKey();
-            String title = entry.getValue();
+          .sorted(Entry.<Integer, String>comparingByKey().reversed())
+          .forEachOrdered(
+              entry -> {
+                int totalViews = entry.getKey();
+                String title = entry.getValue();
 
-            System.out.println(totalViews+" "+title);
-          });
+                System.out.println(totalViews + " " + title);
+              });
 
       /*
       EXERCISE 4
