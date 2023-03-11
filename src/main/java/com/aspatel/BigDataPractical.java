@@ -1,9 +1,13 @@
 package com.aspatel;
 
 import static com.google.common.base.Preconditions.*;
+import static java.util.Comparator.*;
 
+import java.util.Comparator;
+import java.util.Map.Entry;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
+import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import scala.Tuple2;
 
@@ -17,6 +21,13 @@ public class BigDataPractical {
     SparkConf conf = new SparkConf().setAppName("big_data").setMaster("local[*]");
 
     try (JavaSparkContext sc = new JavaSparkContext(conf)) {
+
+      JavaRDD<String> chapters = sc.textFile(
+          "src/main/resources/viewing figures/chapters.csv");
+      JavaRDD<String> views = sc.textFile("src/main/resources/viewing figures/views-*.csv");
+      JavaRDD<String> titles = sc.textFile(
+          "src/main/resources/viewing figures/titles.csv");
+
       /*
       EXERCISE 1
       Build an RDD containing a key of courseId together with the number of chapters
@@ -26,7 +37,7 @@ public class BigDataPractical {
       System.out.println("(no output)");
 
       JavaPairRDD<String, Long> courseIdAndChapterCount =
-          sc.textFile("src/main/resources/viewing figures/chapters.csv")
+          chapters
               .mapToPair(
                   s -> {
                     String[] mapping = s.split(",");
@@ -49,14 +60,16 @@ public class BigDataPractical {
       */
       System.out.println();
       System.out.println("EXERCISE 2");
+      System.out.println("(no output)");
 
       JavaPairRDD<String, String> chaptersToUsers =
-          sc.textFile("src/main/resources/viewing figures/views-*.csv")
+          views
               .mapToPair(
                   line -> {
                     String[] values = line.split(",");
                     String userId = values[0];
                     String chapterId = values[1];
+
                     return new Tuple2<>(chapterId, userId);
                   })
               // a user may watch the same chapter multiple times, so must make
@@ -64,12 +77,13 @@ public class BigDataPractical {
               .distinct();
 
       JavaPairRDD<String, String> chaptersToCourses =
-          sc.textFile("src/main/resources/viewing figures/chapters.csv")
+          chapters
               .mapToPair(
                   line -> {
                     String[] values = line.split(",");
                     String chapterId = values[0];
                     String courseId = values[1];
+
                     return new Tuple2<>(chapterId, courseId);
                   });
 
@@ -78,7 +92,6 @@ public class BigDataPractical {
               .join(chaptersToCourses)
               .mapToPair(
                   row -> {
-                    // Unpacking the joined row...
                     String userId = row._2._1;
                     String courseId = row._2._2;
 
@@ -91,20 +104,19 @@ public class BigDataPractical {
                   row -> {
                     String userId = row._1._1;
                     String courseId = row._1._2;
-                    long views = row._2;
+                    long chaptersSeen = row._2;
 
-                    // For a given "Course", how many "Views" has each "User"
-                    // given to it.
-                    return new Tuple2<>(courseId, new Tuple2<>(userId, views));
+                    // For a given "Course", each "User" has seen "x" chapters.
+                    return new Tuple2<>(courseId, new Tuple2<>(userId, chaptersSeen  ));
                   })
               .join(courseIdAndChapterCount)
               .mapToPair(
                   row -> {
                     String courseId = row._1;
-                    long views = row._2._1._2;
+                    long chaptersSeen = row._2._1._2;
                     long chapterCount = row._2._2;
 
-                    int score = calculateScore(views, chapterCount);
+                    int score = calculateScore(chaptersSeen, chapterCount);
 
                     return new Tuple2<>(courseId, score);
                   })
@@ -118,6 +130,28 @@ public class BigDataPractical {
       */
       System.out.println();
       System.out.println("EXERCISE 3");
+      titles.mapToPair(s-> {
+        String[] mapping = s.split(",");
+        String courseId = mapping[0];
+        String title = mapping[1];
+        return new Tuple2<>(courseId, title);})
+          .join(coursesAndViews)
+          .mapToPair(row -> {
+            String title = row._2._1;
+            int totalViews = row._2._2;
+
+            return new Tuple2<>(totalViews, title);
+          })
+              .collectAsMap()
+          .entrySet()
+          .stream()
+          .sorted(Entry.<Integer,String>comparingByKey().reversed())
+          .forEachOrdered(entry -> {
+            int totalViews = entry.getKey();
+            String title = entry.getValue();
+
+            System.out.println(totalViews+" "+title);
+          });
 
       /*
       EXERCISE 4
@@ -144,18 +178,18 @@ public class BigDataPractical {
    *   <li>Less than 25% is no score
    * </ul>
    *
-   * @param views The distinct number of chapters that a user has viewed. This must be a
+   * @param chaptersSeen The distinct number of chapters that a user has viewed. This must be a
    *     non-negative number.
    * @param chapterCount The total number of chapters in the course. This must be a non-negative
    *     number, that is greater than or equal to the view count.
    * @return A score for the course, calculated using our formula.
    */
-  private static int calculateScore(long views, long chapterCount) {
-    checkState(chapterCount >= views);
+  private static int calculateScore(long chaptersSeen, long chapterCount) {
+    checkState(chapterCount >= chaptersSeen);
     checkState(chapterCount >= 0);
-    checkState(views >= 0);
+    checkState(chaptersSeen >= 0);
 
-    double percentageViewed = ((double) views / (double) chapterCount) * 100;
+    double percentageViewed = ((double) chaptersSeen / (double) chapterCount) * 100;
 
     if (percentageViewed < 25d) {
       return 0;
