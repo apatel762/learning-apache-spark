@@ -1,5 +1,7 @@
 package com.aspatel;
 
+import static com.google.common.base.Preconditions.*;
+
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaSparkContext;
@@ -71,8 +73,7 @@ public class BigDataPractical {
                     return new Tuple2<>(chapterId, courseId);
                   });
 
-      // This dataset contains the number of views each user has given to a course.
-      JavaPairRDD<Tuple2<String, String>, Long> userCourseViews =
+      JavaPairRDD<String, Integer> coursesAndViews =
           chaptersToUsers
               .join(chaptersToCourses)
               .mapToPair(
@@ -82,14 +83,32 @@ public class BigDataPractical {
                     String courseId = row._2._2;
 
                     // Think of the new data structure like this:
-                    // For "Course", "User" has added one view
+                    // For a given "Course", "User" has added "1" view
                     return new Tuple2<>(new Tuple2<>(userId, courseId), 1L);
                   })
-              .reduceByKey(Long::sum);
+              .reduceByKey(Long::sum)
+              .mapToPair(
+                  row -> {
+                    String userId = row._1._1;
+                    String courseId = row._1._2;
+                    long views = row._2;
 
-      // TODO: join user course views with courseIdAndChapterCount somehow to figure
-      //  figure out how many chapters a course has, and from there, we can start
-      //  calculating scores for the courses.
+                    // For a given "Course", how many "Views" has each "User"
+                    // given to it.
+                    return new Tuple2<>(courseId, new Tuple2<>(userId, views));
+                  })
+              .join(courseIdAndChapterCount)
+              .mapToPair(
+                  row -> {
+                    String courseId = row._1;
+                    long views = row._2._1._2;
+                    long chapterCount = row._2._2;
+
+                    int score = calculateScore(views, chapterCount);
+
+                    return new Tuple2<>(courseId, score);
+                  })
+              .reduceByKey(Integer::sum);
 
       /*
       EXERCISE 3
@@ -112,7 +131,40 @@ public class BigDataPractical {
     }
   }
 
-  private static <KEY, VALUE> Tuple2<VALUE, KEY> flipTuple(Tuple2<KEY, VALUE> pair) {
-    return new Tuple2<>(pair._2, pair._1);
+  /**
+   * Calculate the score to give to a course based on the number of chapters that a user has seen in
+   * proportion to the total number of chapters.
+   *
+   * <p>Our formula is as follows:
+   *
+   * <ul>
+   *   <li>If a user watches more than 90% of the course, the course gets 10 points
+   *   <li>If a user watches > 50% but <90% , it scores 4
+   *   <li>If a user watches > 25% but < 50% it scores 2
+   *   <li>Less than 25% is no score
+   * </ul>
+   *
+   * @param views The distinct number of chapters that a user has viewed. This must be a
+   *     non-negative number.
+   * @param chapterCount The total number of chapters in the course. This must be a non-negative
+   *     number, that is greater than or equal to the view count.
+   * @return A score for the course, calculated using our formula.
+   */
+  private static int calculateScore(long views, long chapterCount) {
+    checkState(chapterCount >= views);
+    checkState(chapterCount >= 0);
+    checkState(views >= 0);
+
+    double percentageViewed = ((double) views / (double) chapterCount) * 100;
+
+    if (percentageViewed < 25d) {
+      return 0;
+    } else if (percentageViewed < 50d) {
+      return 2;
+    } else if (percentageViewed < 90d) {
+      return 4;
+    } else {
+      return 10;
+    }
   }
 }
