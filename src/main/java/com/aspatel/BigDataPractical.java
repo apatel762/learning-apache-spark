@@ -91,7 +91,6 @@ public class BigDataPractical {
                     String userId = row._2._1;
                     String courseId = row._2._2;
 
-                    // Think of the new data structure like this:
                     // For a given "Course", "User" has added "1" view
                     return new Tuple2<>(new Tuple2<>(userId, courseId), 1L);
                   })
@@ -132,6 +131,7 @@ public class BigDataPractical {
                 String[] mapping = s.split(",");
                 String courseId = mapping[0];
                 String title = mapping[1];
+
                 return new Tuple2<>(courseId, title);
               })
           .join(coursesAndViews)
