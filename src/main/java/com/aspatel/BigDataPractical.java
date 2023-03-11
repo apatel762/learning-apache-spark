@@ -71,20 +71,25 @@ public class BigDataPractical {
                     return new Tuple2<>(chapterId, courseId);
                   });
 
-      // TODO: how many chapters has the user seen in the course
-      //  -> we need to join chapter : course and reduce
-      chaptersToUsers
-          .join(chaptersToCourses)
-          .mapToPair(
-              row -> {
-                // Unpacking the joined row...
-                String userId = row._2._1;
-                String courseId = row._2._2;
+      // This dataset contains the number of views each user has given to a course.
+      JavaPairRDD<Tuple2<String, String>, Long> userCourseViews =
+          chaptersToUsers
+              .join(chaptersToCourses)
+              .mapToPair(
+                  row -> {
+                    // Unpacking the joined row...
+                    String userId = row._2._1;
+                    String courseId = row._2._2;
 
-                // Think of the new data structure like this:
-                // "the [userId] has seen a [chapterId] from this [courseId]"
-                return new Tuple2<>(userId, new Tuple2<>(courseId, 1L));
-              });
+                    // Think of the new data structure like this:
+                    // For "Course", "User" has added one view
+                    return new Tuple2<>(new Tuple2<>(userId, courseId), 1L);
+                  })
+              .reduceByKey(Long::sum);
+
+      // TODO: join user course views with courseIdAndChapterCount somehow to figure
+      //  figure out how many chapters a course has, and from there, we can start
+      //  calculating scores for the courses.
 
       /*
       EXERCISE 3
